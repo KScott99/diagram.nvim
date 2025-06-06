@@ -59,24 +59,16 @@ M.render = function(source, options)
 		table.insert(command_parts, "-s")
 	end
 
-	local command = table.concat(command_parts, " ")
+	local on_exit = function(obj)
+		if obj.code ~= 0 then
+			vim.schedule(function()
+				vim.notify("diagram/d2: d2 failed to render diagram: " .. obj.stderr, vim.log.levels.ERROR)
+			end)
+		end
+	end
+	vim.system(command_parts, { text = true, timeout = 10000 }, on_exit)
 
-	local job_id = vim.fn.jobstart(command, {
-		on_stdout = function(job_id, data, event) end,
-		on_stderr = function(job_id, data, event)
-			local error_msg = table.concat(data, "\n")
-			if #error_msg > 0 then
-				vim.notify("diagram/d2: d2 failed to render diagram" .. error_msg, vim.log.levels.ERROR)
-			end
-			return nil
-		end,
-		on_exit = function(job_id, exit_code, event)
-			-- local msg = string.format("Job %d exited with code %d.", job_id, exit_code)
-			-- vim.api.nvim_out_write(msg .. "\n")
-		end,
-	})
-
-	return { file_path = path, job_id = job_id }
+	return { file_path = path }
 end
 
 return M
